@@ -1,0 +1,33 @@
+[0:00 — HOOK]
+Welcome everyone. Have you ever tried organizing a group dinner, a party, or a team building event? If you have, you know that keeping track of RSVPs, dietary needs, venue availability, and splitting costs can quickly become a chaotic mess. Today, I am excited to show you the Event Coordinator Agent—a secure, intelligent, multi-agent assistant designed to handle the heavy lifting for you.
+
+[0:20 — WHAT IT IS]
+Built on the Google ADK and powered by Gemini, this project is a smart assistant designed for the Track 2: Agents for Business theme. It automates guest lists, venue capacities, catering lookups, and expense calculations all in one unified, secure workspace.
+
+[0:40 — SHOW THE BANNER]
+(show assets/cover_page_banner.png)
+As you can see on the screen, this is our premium dashboard banner. The system is designed to be highly secure and fully automated, giving users a state-of-the-art coordination assistant that does in seconds what normally takes hours of back-and-forth messaging.
+(pause)
+
+[1:00 — ARCHITECTURE]
+(show assets/architecture_diagram.png)
+Let's take a look at the workflow architecture. When a user submits a request, it first goes to our Security Checkpoint. This node detects prompt injections, redacts PII, and flags fraudulent costs. If clean, the request goes to the Event Orchestrator. 
+The Orchestrator delegates tasks to two specialized LlmAgents: the RSVP Manager, which tracks guests and queries our local MCP catering options, and the Expense Calculator, which calculates exact cost splits. 
+Before anything is finalized, we pass through a Human Review node using the ADK's RequestInput. This keeps a human-in-the-loop, allowing the coordinator to inspect and approve the plan before the Final Output is generated.
+(pause)
+
+[2:00 — LIVE DEMO]
+(switch to playground at localhost:18081)
+Now, let's watch the agent in action. We'll input a standard event planning query:
+"Organize a dinner for 10 guests. We want Italian cuisine at the Community Center. John paid $250 for the venue, and Mary paid $100 for decorations. Split the costs."
+(pause)
+Notice how the agent runs the workflow. It parses the guests, queries the Community Center capacity, grabs the Italian catering menu, and computes that the total is $350, meaning everyone owes $35. It pauses here and asks: "Please review the plan. Reply 'Yes' to approve."
+We reply "Yes" and the agent finalizes the plan!
+(pause)
+
+[3:00 — SECURITY & MCP]
+The security checkpoint is the shield of this application. It blocks prompt injection tricks and PII instantly. For example, if someone inputs an email address or tries to claim a $6,000 expense, the checkpoint flags it, writes a structured JSON audit log, and stops the execution before calling the LLM. 
+Our MCP server exposes three tools: catering retrieval, venue details, and automatic invitation email generation, providing the LLM with real-time data.
+
+[3:30 — IMPACT / CLOSE]
+By combining multi-agent delegation, custom tools, and automated policy verification, the Event Coordinator Agent turns complex coordination into a single, secure, and stress-free conversation. It saves hours of manual work, keeps budgets transparent, and ensures user data remains safe. Thank you!
