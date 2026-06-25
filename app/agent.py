@@ -20,7 +20,7 @@ from google.genai import types
 from mcp import StdioServerParameters
 from pydantic import BaseModel, Field
 
-from app.config import config
+from .config import config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -97,28 +97,26 @@ rsvp_manager = LlmAgent(
     name="rsvp_manager",
     model=config.model,
     instruction=(
-        "You are a specialized RSVP Manager. Your job is to extract guest names, their RSVP status "
-        "(attending, declined, pending), and any dietary requirements from the provided description/query. "
-        "Formulate a structured list of guests and compile a dietary needs summary. "
-        "Use your MCP tools to get venue details or check catering/menu suitability if requested."
+        "You are a specialized RSVP Manager. Extract guest names, their RSVP status "
+        "(attending, declined, pending), and any dietary requirements from the event description. "
+        "Return a structured JSON object with 'guests' (list of {name, status, dietary}) "
+        "and 'summary' (a text summary of guest list and dietary needs)."
     ),
     output_schema=RSVPResult,
     output_key="rsvp_data",
-    tools=[mcp_tools],
 )
 
 expense_calculator = LlmAgent(
     name="expense_calculator",
     model=config.model,
     instruction=(
-        "You are a specialized Expense Calculator. Your job is to extract financial details (items, cost, who paid) "
-        "from the provided description/query. Compute the total cost, and split this cost evenly among all attending guests. "
-        "Detail who owes what to whom to achieve an even split. "
-        "Use your MCP tools to check catering prices or venue costs if needed."
+        "You are a specialized Expense Calculator. Extract financial details (items, cost, who paid) "
+        "from the event description. Compute the total cost and split it evenly among all attending guests. "
+        "Return a structured JSON with 'expenses' (list of {item, paid_by, amount}), "
+        "'total_cost' (float), and 'split_details' (list of strings describing who owes what)."
     ),
     output_schema=ExpenseResult,
     output_key="expense_data",
-    tools=[mcp_tools],
 )
 
 # Expose sub-agents as tools using AgentTool
@@ -126,27 +124,40 @@ rsvp_tool = AgentTool(agent=rsvp_manager)
 expense_tool = AgentTool(agent=expense_calculator)
 
 # --- Orchestrator Agent ---
+# NOTE: output_schema cannot be combined with tools in ADK.
+# The orchestrator uses sub-agent tools and writes a text summary to output_key.
 
 event_orchestrator = LlmAgent(
     name="event_orchestrator",
     model=config.model,
     instruction=(
-        "You are the Event Orchestrator. Your role is to coordinate event planning. "
-        "You have access to two specialized tools: rsvp_manager and expense_calculator. "
-        "Use these tools to analyze the guest list and expense details from the query. "
-        "Then, compile a comprehensive event plan draft, integrating guest RSVPs and cost splits."
+        "You are the Event Orchestrator coordinating event planning. "
+        "Call 'rsvp_manager' with the full event description to get the RSVP summary. "
+        "Call 'expense_calculator' with the full event description to get the expense breakdown. "
+        "After both tools return, compile a comprehensive event plan in this EXACT JSON format:\n"
+        "{\n"
+        '  "rsvp_summary": "<text summary of guests and dietary needs>",\n'
+        '  "expense_summary": "<text summary of expenses and cost splits>",\n'
+        '  "overall_plan_summary": "<narrative combining RSVP list and cost splits>"\n'
+        "}\n"
+        "Output ONLY the JSON object, nothing else."
     ),
     tools=[rsvp_tool, expense_tool],
-    output_schema=OrchestratorOutput,
     output_key="orchestrator_response",
 )
 
 # --- Workflow Graph Nodes ---
 
 
-def security_checkpoint(ctx: Context, node_input: WorkflowInput) -> Event:
+def security_checkpoint(ctx: Context, node_input: Any) -> Event:
     """Security node to check for PII, prompt injection, and domain-specific rules."""
-    query = node_input.query
+    # node_input may be a WorkflowInput, a plain string, or a dict
+    if isinstance(node_input, WorkflowInput):
+        query = node_input.query
+    elif isinstance(node_input, dict):
+        query = node_input.get("query", str(node_input))
+    else:
+        query = str(node_input)
     logger.info(f"Security check on query: {query}")
 
     # Helper for JSON audit logging
@@ -231,16 +242,23 @@ def security_error_node(node_input: str) -> Generator[Event, None, None]:
     yield Event(output=msg)
 
 
-async def human_review(ctx: Context, node_input: dict) -> Generator[Any, None, None]:
+async def human_review(ctx: Context, node_input: Any) -> Generator[Any, None, None]:
     """HITL step using RequestInput to get user approval on the plan."""
-    overall_plan = node_input.get("overall_plan_summary", "")
+    # node_input is the orchestrator's text output (JSON string or dict)
+    if isinstance(node_input, dict):
+        plan_data = node_input
+    else:
+        try:
+            plan_data = json.loads(str(node_input))
+        except Exception:
+            plan_data = {"overall_plan_summary": str(node_input)}
 
     if not ctx.resume_inputs:
         prompt_msg = (
             f"📋 **Draft Event Plan Generated:**\n\n"
-            f"**RSVP Summary:**\n{node_input.get('rsvp_summary', '')}\n\n"
-            f"**Expense Summary:**\n{node_input.get('expense_summary', '')}\n\n"
-            f"**Overall Plan:**\n{overall_plan}\n\n"
+            f"**RSVP Summary:**\n{plan_data.get('rsvp_summary', 'N/A')}\n\n"
+            f"**Expense Summary:**\n{plan_data.get('expense_summary', 'N/A')}\n\n"
+            f"**Overall Plan:**\n{plan_data.get('overall_plan_summary', 'N/A')}\n\n"
             f"✋ Please review the plan. Reply **'Yes'** to approve, or provide changes/feedback."
         )
         yield RequestInput(interrupt_id="approve_event_plan", message=prompt_msg)
@@ -279,7 +297,6 @@ def final_output(node_input: dict) -> Generator[Event, None, None]:
 
 root_agent = Workflow(
     name="event_coordinator",
-    input_schema=WorkflowInput,
     state_schema=EventState,
     edges=[
         (START, security_checkpoint),
