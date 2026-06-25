@@ -127,8 +127,8 @@ expense_tool = AgentTool(agent=expense_calculator)
 # NOTE: output_schema cannot be combined with tools in ADK.
 # The orchestrator uses sub-agent tools and writes a text summary to output_key.
 
-event_orchestrator = LlmAgent(
-    name="event_orchestrator",
+event_orchestrator_agent = LlmAgent(
+    name="event_orchestrator_agent",
     model=config.model,
     instruction=(
         "You are the Event Orchestrator coordinating event planning. "
@@ -145,6 +145,12 @@ event_orchestrator = LlmAgent(
     tools=[rsvp_tool, expense_tool],
     output_key="orchestrator_response",
 )
+
+
+async def event_orchestrator(ctx: Context, node_input: Any) -> Event:
+    """Wrapper function node to run event_orchestrator_agent so ADK traces it as a node."""
+    logger.info("Executing event_orchestrator wrapper node")
+    return await event_orchestrator_agent.run_async(node_input, ctx=ctx)
 
 # --- Workflow Graph Nodes ---
 
