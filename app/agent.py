@@ -18,6 +18,7 @@ from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset
 from google.adk.workflow import START, Workflow
 from google.genai import types
 from mcp import StdioServerParameters
+from google.adk.workflow._llm_agent_wrapper import run_llm_agent_as_node
 from pydantic import BaseModel, Field
 
 from .config import config
@@ -147,10 +148,13 @@ event_orchestrator_agent = LlmAgent(
 )
 
 
-async def event_orchestrator(ctx: Context, node_input: Any) -> Event:
+async def event_orchestrator(ctx: Context, node_input: Any) -> Generator[Any, None, None]:
     """Wrapper function node to run event_orchestrator_agent so ADK traces it as a node."""
     logger.info("Executing event_orchestrator wrapper node")
-    return await event_orchestrator_agent.run_async(node_input, ctx=ctx)
+    async for event in run_llm_agent_as_node(
+        event_orchestrator_agent, ctx=ctx, node_input=node_input
+    ):
+        yield event
 
 # --- Workflow Graph Nodes ---
 
