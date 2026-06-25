@@ -144,7 +144,7 @@ event_orchestrator_agent = LlmAgent(
         "Output ONLY the JSON object, nothing else."
     ),
     tools=[rsvp_tool, expense_tool],
-    output_key="orchestrator_response",
+    output_key="orchestrator_summary",
 )
 
 
