@@ -28,7 +28,7 @@ Before running the agent, make sure you have:
    ```bash
    make playground
    ```
-   *(Opens the playground UI in your browser at http://localhost:18081)*
+   *(Opens the playground UI in your browser at http://localhost:18081/dev-ui/?app=app)*
 
 ---
 
@@ -57,7 +57,7 @@ graph TD
 ## How to Run
 
 - **Playground (Interactive UI)**:
-  - Run `make playground` to launch the Dev UI on http://localhost:18081.
+  - Run `make playground` to launch the Dev UI on http://localhost:18081/dev-ui/?app=app.
 - **FastAPI Server**:
   - Run `make run` to spin up the local server backend.
 
