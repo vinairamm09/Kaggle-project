@@ -135,13 +135,8 @@ event_orchestrator_agent = LlmAgent(
         "You are the Event Orchestrator coordinating event planning. "
         "Call 'rsvp_manager' with the full event description to get the RSVP summary. "
         "Call 'expense_calculator' with the full event description to get the expense breakdown. "
-        "After both tools return, compile a comprehensive event plan in this EXACT JSON format:\n"
-        "{\n"
-        '  "rsvp_summary": "<text summary of guests and dietary needs>",\n'
-        '  "expense_summary": "<text summary of expenses and cost splits>",\n'
-        '  "overall_plan_summary": "<narrative combining RSVP list and cost splits>"\n'
-        "}\n"
-        "Output ONLY the JSON object, nothing else."
+        "After both tools return, compile a comprehensive event plan in markdown format. "
+        "Highlight the RSVP guest list, total expenses, and the cost split details clearly."
     ),
     tools=[rsvp_tool, expense_tool],
     output_key="orchestrator_summary",
@@ -254,21 +249,12 @@ def security_error_node(node_input: str) -> Generator[Event, None, None]:
 
 async def human_review(ctx: Context, node_input: Any) -> Generator[Any, None, None]:
     """HITL step using RequestInput to get user approval on the plan."""
-    # node_input is the orchestrator's text output (JSON string or dict)
-    if isinstance(node_input, dict):
-        plan_data = node_input
-    else:
-        try:
-            plan_data = json.loads(str(node_input))
-        except Exception:
-            plan_data = {"overall_plan_summary": str(node_input)}
+    plan_text = str(node_input)
 
     if not ctx.resume_inputs:
         prompt_msg = (
             f"📋 **Draft Event Plan Generated:**\n\n"
-            f"**RSVP Summary:**\n{plan_data.get('rsvp_summary', 'N/A')}\n\n"
-            f"**Expense Summary:**\n{plan_data.get('expense_summary', 'N/A')}\n\n"
-            f"**Overall Plan:**\n{plan_data.get('overall_plan_summary', 'N/A')}\n\n"
+            f"{plan_text}\n\n"
             f"✋ Please review the plan. Reply **'Yes'** to approve, or provide changes/feedback."
         )
         yield RequestInput(interrupt_id="approve_event_plan", message=prompt_msg)
