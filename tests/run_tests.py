@@ -127,7 +127,7 @@ def run_tests():
     try:
         urllib.request.urlopen(f"{BASE}/version", timeout=3)
     except Exception:
-        print("❌ FATAL: Playground server is not running at", BASE)
+        print("[FATAL] Playground server is not running at", BASE)
         sys.exit(1)
 
     results = []
@@ -137,14 +137,14 @@ def run_tests():
 
         # Create session
         if not create_session(session_id):
-            print("  ⚠️  Session creation failed — skipping")
+            print("  [SKIP] Session creation failed — skipping")
             results.append((case["id"], "SKIP", "Session creation failed"))
             continue
 
         # Run agent
         output, err = run_agent(session_id, case["query"])
         if err:
-            print(f"  ❌ ERROR: {err}")
+            print(f"  [ERROR] {err}")
             results.append((case["id"], "ERROR", err))
             continue
 
@@ -154,24 +154,24 @@ def run_tests():
             # Expect security block
             keyword = (case["expect_contains"] or "").lower()
             if keyword and keyword in output_lower:
-                print(f"  ✅ PASS — Correctly blocked: '{case['expect_contains']}'")
+                print(f"  [PASS] Correctly blocked: '{case['expect_contains']}'")
                 results.append((case["id"], "PASS", output[:120]))
             elif "security blocked" in output_lower or "blocked" in output_lower:
-                print(f"  ✅ PASS — Blocked (keyword slightly different)")
+                print(f"  [PASS] Blocked (keyword slightly different)")
                 results.append((case["id"], "PASS", output[:120]))
             else:
-                print(f"  ❌ FAIL — Expected block but got: {output[:200]}")
+                print(f"  [FAIL] Expected block but got: {output[:200]}")
                 results.append((case["id"], "FAIL", output[:200]))
         else:
             # LLM case — just check we got a response (not blocked)
             if not output:
-                print(f"  ⚠️  PENDING — No output yet (may need approval step or LLM is slow)")
+                print(f"  [PENDING] No output yet (may need approval step or LLM is slow)")
                 results.append((case["id"], "PENDING", "No text output — LLM may still be processing"))
             elif "security blocked" in output_lower:
-                print(f"  ❌ FAIL — Unexpectedly blocked: {output[:200]}")
+                print(f"  [FAIL] Unexpectedly blocked: {output[:200]}")
                 results.append((case["id"], "FAIL", output[:200]))
             else:
-                print(f"  ✅ PASS — Got LLM response")
+                print(f"  [PASS] Got LLM response")
                 results.append((case["id"], "PASS", output[:120]))
 
         # Small delay between sessions
@@ -183,7 +183,7 @@ def run_tests():
     print(" RESULTS SUMMARY")
     print("=" * 60)
     for (tc_id, status, detail) in results:
-        icon = {"PASS": "✅", "FAIL": "❌", "ERROR": "💥", "SKIP": "⏭️", "PENDING": "⏳"}.get(status, "?")
+        icon = {"PASS": "[PASS]", "FAIL": "[FAIL]", "ERROR": "[ERROR]", "SKIP": "[SKIP]", "PENDING": "[PENDING]"}.get(status, "?")
         print(f"  {icon} TC{tc_id}: {status}")
         if status in ("FAIL", "ERROR"):
             print(f"       Detail: {detail}")
@@ -191,10 +191,10 @@ def run_tests():
     fails = [r for r in results if r[1] in ("FAIL", "ERROR")]
     print(f"  Passed: {sum(1 for r in results if r[1]=='PASS')} / {len(results)}")
     if fails:
-        print(f"  ❌ {len(fails)} test(s) FAILED — see details above")
+        print(f"  [FAIL] {len(fails)} test(s) FAILED — see details above")
         sys.exit(1)
     else:
-        print("  🎉 All tests passed (or pending LLM approval step)!")
+        print("  [SUCCESS] All tests passed (or pending LLM approval step)!")
         sys.exit(0)
 
 
