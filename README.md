@@ -118,6 +118,16 @@ graph TD
 
 ---
 
+## Live Demo
+
+### Demo Screenshot
+![Demo Screenshot](assets/demo_screenshot.png)
+
+### Demo Recording
+The animated demo (WebP) is available at [assets/demo.webp](assets/demo.webp).
+
+---
+
 ## Assets
 
 ### Workflow Diagram
@@ -129,3 +139,54 @@ graph TD
 ## Demo Script
 
 The demo script for walkthroughs and presentations can be found in [DEMO_SCRIPT.txt](DEMO_SCRIPT.txt).
+
+---
+
+## Cloud Run Deployment
+
+Deploy the agent as a public REST API on Google Cloud Run:
+
+### Prerequisites
+- [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed
+- Docker installed
+- A GCP project with Cloud Run & Artifact Registry APIs enabled
+
+### Steps
+
+1. **Set your project:**
+   ```bash
+   gcloud config set project YOUR_PROJECT_ID
+   ```
+
+2. **Enable required APIs:**
+   ```bash
+   gcloud services enable run.googleapis.com artifactregistry.googleapis.com
+   ```
+
+3. **Build & push the Docker image:**
+   ```bash
+   gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/event-coordinator .
+   ```
+
+4. **Deploy to Cloud Run:**
+   ```bash
+   gcloud run deploy event-coordinator \
+     --image gcr.io/YOUR_PROJECT_ID/event-coordinator \
+     --platform managed \
+     --region us-central1 \
+     --allow-unauthenticated \
+     --set-env-vars GOOGLE_API_KEY=YOUR_API_KEY \
+     --port 8080
+   ```
+
+5. **Get your public URL:**
+   ```bash
+   gcloud run services describe event-coordinator --region us-central1 --format="value(status.url)"
+   ```
+
+The deployed service exposes the full ADK REST API at:
+```
+https://YOUR_CLOUD_RUN_URL/run_sse
+```
+
+> **Note:** The Cloud Run deployment serves the ADK API backend (`adk api_server`). For the interactive Dev UI, run `make playground` locally.
