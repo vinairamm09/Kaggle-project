@@ -296,7 +296,7 @@ root_agent = Workflow(
 )
 
 app = App(
-    name="event-coordinator-app",
+    name="app",
     root_agent=root_agent,
     resumability_config=ResumabilityConfig(is_resumable=True),
 )
