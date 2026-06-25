@@ -118,37 +118,6 @@ graph TD
 
 ---
 
-## Push to GitHub
-
-1. Create a new repo at https://github.com/new
-   - Name: event-coordinator
-   - Visibility: Public or Private
-   - Do NOT initialize with README (you already have one)
-
-2. In your terminal, navigate into your project folder:
-   ```bash
-   cd event-coordinator
-   git init
-   git add .
-   git commit -m "Initial commit: event-coordinator ADK agent"
-   git branch -M main
-   git remote add origin https://github.com/<your-username>/event-coordinator.git
-   git push -u origin main
-   ```
-
-3. Verify `.gitignore` includes:
-   ```text
-   .env          ← your API key — must NEVER be pushed
-   .venv/
-   __pycache__/
-   *.pyc
-   .adk/
-   ```
-
-**WARNING:** NEVER push `.env` to GitHub. Your API key will be exposed publicly.
-
----
-
 ## Assets
 
 ### Workflow Diagram
