@@ -118,16 +118,6 @@ graph TD
 
 ---
 
-## Live Demo
-
-### Demo Screenshot
-![Demo Screenshot](assets/demo_screenshot.png)
-
-### Demo Recording
-The animated demo (WebP) is available at [assets/demo.webp](assets/demo.webp).
-
----
-
 ## Assets
 
 ### Workflow Diagram
